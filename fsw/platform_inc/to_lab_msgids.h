@@ -29,11 +29,13 @@
 #ifndef _to_lab_msgids_h_
 #define _to_lab_msgids_h_
 
-#define TO_LAB_CMD_MID     0x1880
-#define TO_LAB_SEND_HK_MID 0x1881
+#include "cfe_msgids.h"
 
-#define TO_LAB_HK_TLM_MID     0x0880
-#define TO_LAB_DATA_TYPES_MID 0x0881
+#define TO_LAB_CMD_MID        (CFE_PLATFORM_CMD_MID_BASE + 0x80)
+#define TO_LAB_SEND_HK_MID    (CFE_PLATFORM_CMD_MID_BASE + 0x81)
+
+#define TO_LAB_HK_TLM_MID     (CFE_PLATFORM_TLM_MID_BASE + 0x80)
+#define TO_LAB_DATA_TYPES_MID (CFE_PLATFORM_TLM_MID_BASE + 0x81)
 
 #endif /* _to_lab_msgids_h_ */
 
