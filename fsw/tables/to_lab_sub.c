@@ -42,7 +42,6 @@
 #include "to_lab_msgids.h"
 #include "ci_lab_msgids.h"
 
-// #include "sample_app_msgids.h"
 // #include "ros_app_msgids.h"
 #include "robot_sim_msgids.h"
 
