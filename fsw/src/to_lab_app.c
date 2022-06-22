@@ -1,31 +1,25 @@
 /************************************************************************
-**
-**      GSC-18128-1, "Core Flight Executive Version 6.7"
-**
-**      Copyright (c) 2006-2019 United States Government as represented by
-**      the Administrator of the National Aeronautics and Space Administration.
-**      All Rights Reserved.
-**
-**      Licensed under the Apache License, Version 2.0 (the "License");
-**      you may not use this file except in compliance with the License.
-**      You may obtain a copy of the License at
-**
-**        http://www.apache.org/licenses/LICENSE-2.0
-**
-**      Unless required by applicable law or agreed to in writing, software
-**      distributed under the License is distributed on an "AS IS" BASIS,
-**      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-**      See the License for the specific language governing permissions and
-**      limitations under the License.
-**
-** File: to_lab_app.c
-**
-** Purpose:
-**  his file contains the source code for the TO lab application
-**
-** Notes:
-**
-*************************************************************************/
+ * NASA Docket No. GSC-18,719-1, and identified as “core Flight System: Bootes”
+ *
+ * Copyright (c) 2020 United States Government as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may
+ * not use this file except in compliance with the License. You may obtain
+ * a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ************************************************************************/
+
+/**
+ * \file
+ *  This file contains the source code for the TO lab application
+ */
 
 #include "to_lab_app.h"
 #include "to_lab_msg.h"
@@ -55,14 +49,6 @@ TO_LAB_GlobalData_t TO_LAB_Global;
 
 TO_LAB_Subs_t *  TO_LAB_Subs;
 CFE_TBL_Handle_t TO_SubTblHandle;
-/*
-** Event Filter Table
-*/
-static CFE_EVS_BinFilter_t CFE_TO_EVS_Filters[] = {/* Event ID    mask */
-                                                   {TO_INIT_INF_EID, 0x0000},       {TO_CRCMDPIPE_ERR_EID, 0x0000},
-                                                   {TO_SUBSCRIBE_ERR_EID, 0x0000},  {TO_TLMOUTSOCKET_ERR_EID, 0x0000},
-                                                   {TO_TLMOUTSTOP_ERR_EID, 0x0000}, {TO_MSGID_ERR_EID, 0x0000},
-                                                   {TO_FNCODE_ERR_EID, 0x0000},     {TO_NOOP_INF_EID, 0x0000}};
 
 /*
 ** Prototypes Section
@@ -158,14 +144,14 @@ int32 TO_LAB_init(void)
     strcpy(ToTlmPipeName, "TO_LAB_TLM_PIPE");
 
     /*
-    ** Register event filter table...
+    ** Register with EVS
     */
-    CFE_EVS_Register(CFE_TO_EVS_Filters, sizeof(CFE_TO_EVS_Filters) / sizeof(CFE_EVS_BinFilter_t),
-                     CFE_EVS_EventFilter_BINARY);
+    CFE_EVS_Register(NULL, 0, CFE_EVS_EventFilter_BINARY);
     /*
     ** Initialize housekeeping packet (clear user data area)...
     */
-    CFE_MSG_Init(&TO_LAB_Global.HkTlm.TlmHeader.Msg, TO_LAB_HK_TLM_MID, sizeof(TO_LAB_Global.HkTlm));
+    CFE_MSG_Init(CFE_MSG_PTR(TO_LAB_Global.HkTlm.TelemetryHeader), CFE_SB_ValueToMsgId(TO_LAB_HK_TLM_MID),
+                 sizeof(TO_LAB_Global.HkTlm));
 
     status = CFE_TBL_Register(&TO_SubTblHandle, "TO_LAB_Subs", sizeof(*TO_LAB_Subs), CFE_TBL_OPT_DEFAULT, NULL);
 
@@ -198,8 +184,8 @@ int32 TO_LAB_init(void)
     status = CFE_SB_CreatePipe(&TO_LAB_Global.Cmd_pipe, PipeDepth, PipeName);
     if (status == CFE_SUCCESS)
     {
-        CFE_SB_Subscribe(TO_LAB_CMD_MID, TO_LAB_Global.Cmd_pipe);
-        CFE_SB_Subscribe(TO_LAB_SEND_HK_MID, TO_LAB_Global.Cmd_pipe);
+        CFE_SB_Subscribe(CFE_SB_ValueToMsgId(TO_LAB_CMD_MID), TO_LAB_Global.Cmd_pipe);
+        CFE_SB_Subscribe(CFE_SB_ValueToMsgId(TO_LAB_SEND_HK_MID), TO_LAB_Global.Cmd_pipe);
     }
     else
         CFE_EVS_SendEvent(TO_CRCMDPIPE_ERR_EID, CFE_EVS_EventType_ERROR, "L%d TO Can't create cmd pipe status %i",
@@ -216,9 +202,9 @@ int32 TO_LAB_init(void)
     /* Subscriptions for TLM pipe*/
     for (i = 0; (i < (sizeof(TO_LAB_Subs->Subs) / sizeof(TO_LAB_Subs->Subs[0]))); i++)
     {
-        if (CFE_SB_MsgId_Equal(TO_LAB_Subs->Subs[i].Stream, TO_UNUSED))
+        if (!CFE_SB_IsValidMsgId(TO_LAB_Subs->Subs[i].Stream))
         {
-            /* Only process until MsgId TO_UNUSED is found*/
+            /* Only process until invalid MsgId (aka TO_UNUSED) is found*/
             break;
         }
         else if (CFE_SB_IsValidMsgId(TO_LAB_Subs->Subs[i].Stream))
@@ -395,9 +381,10 @@ int32 TO_LAB_SendDataTypes(const TO_LAB_SendDataTypesCmd_t *data)
     char  string_variable[10] = "ABCDEFGHIJ";
 
     /* initialize data types packet */
-    CFE_MSG_Init(&TO_LAB_Global.DataTypesTlm.TlmHeader.Msg, TO_LAB_DATA_TYPES_MID, sizeof(TO_LAB_Global.DataTypesTlm));
+    CFE_MSG_Init(CFE_MSG_PTR(TO_LAB_Global.DataTypesTlm.TelemetryHeader), CFE_SB_ValueToMsgId(TO_LAB_DATA_TYPES_MID),
+                 sizeof(TO_LAB_Global.DataTypesTlm));
 
-    CFE_SB_TimeStampMsg(&TO_LAB_Global.DataTypesTlm.TlmHeader.Msg);
+    CFE_SB_TimeStampMsg(CFE_MSG_PTR(TO_LAB_Global.DataTypesTlm.TelemetryHeader));
 
     /* initialize the packet data */
     TO_LAB_Global.DataTypesTlm.Payload.synch = 0x6969;
@@ -428,7 +415,7 @@ int32 TO_LAB_SendDataTypes(const TO_LAB_SendDataTypesCmd_t *data)
     for (i = 0; i < 10; i++)
         TO_LAB_Global.DataTypesTlm.Payload.str[i] = string_variable[i];
 
-    CFE_SB_TransmitMsg(&TO_LAB_Global.DataTypesTlm.TlmHeader.Msg, true);
+    CFE_SB_TransmitMsg(CFE_MSG_PTR(TO_LAB_Global.DataTypesTlm.TelemetryHeader), true);
 
     ++TO_LAB_Global.HkTlm.Payload.CommandCounter;
     return CFE_SUCCESS;
@@ -441,8 +428,8 @@ int32 TO_LAB_SendDataTypes(const TO_LAB_SendDataTypesCmd_t *data)
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 int32 TO_LAB_SendHousekeeping(const CFE_MSG_CommandHeader_t *data)
 {
-    CFE_SB_TimeStampMsg(&TO_LAB_Global.HkTlm.TlmHeader.Msg);
-    CFE_SB_TransmitMsg(&TO_LAB_Global.HkTlm.TlmHeader.Msg, true);
+    CFE_SB_TimeStampMsg(CFE_MSG_PTR(TO_LAB_Global.HkTlm.TelemetryHeader));
+    CFE_SB_TransmitMsg(CFE_MSG_PTR(TO_LAB_Global.HkTlm.TelemetryHeader), true);
     return CFE_SUCCESS;
 }
 
@@ -582,7 +569,7 @@ void TO_LAB_forward_telemetry(void)
             if (status < 0)
             {
                 CFE_EVS_SendEvent(TO_TLMOUTSTOP_ERR_EID, CFE_EVS_EventType_ERROR,
-                                  "L%d TO sendto error %d. Tlm output supressed\n", __LINE__, (int)status);
+                                  "L%d TO sendto error %d. Tlm output suppressed\n", __LINE__, (int)status);
                 TO_LAB_Global.suppress_sendto = true;
             }
         }
